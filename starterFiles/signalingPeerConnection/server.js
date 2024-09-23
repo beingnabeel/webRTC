@@ -60,12 +60,45 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("newOfferAwaiting", offers.slice(-1));
   });
 
+  socket.on("newAnswer", (offerObj, ackFunction) => {
+    console.log(offerObj);
+    // emit this answer (offerObj )(it only needs the answer but we are gonna send the entire offer obj) back to client1
+    // in order to do that we ned clients 1 socketid
+    const socketToAnswer = connectedSockets.find(
+      (s) => s.userName === offerObj.offererUserName
+    );
+    if (!socketToAnswer) {
+      console.log("No matching socket");
+      return;
+    }
+    // otherwise we found the matching socket, so we can emit to it.
+    const socketIdToAnswer = socketToAnswer.socketId;
+    // we find the offer to update so we can emit it
+    const offerToUpdate = offers.find(
+      (o) => o.offererUserName === offerObj.offererUserName
+    );
+    // so here the offerObj is what client sended us and o is the offer that we have on the server.
+    if (!offerToUpdate) {
+      console.log("No offer to update");
+      return;
+    }
+    // send back to the answerer all the icecandidates we have already collected.
+    ackFunction(offerToUpdate.offerIceCandidates);
+    offerToUpdate.answer = offerObj.answer;
+    offerToUpdate.answererUserName = userName;
+    // socket has a .to() which allows emitng to a "room"
+    // every socket has it's own room
+    socket.to(socketIdToAnswer).emit("answerResponse", offerToUpdate);
+  });
+
   socket.on("sendIceCandidateToSignalingServer", (iceCandidateObj) => {
     const { didIOffer, iceUserName, iceCandidate } = iceCandidateObj;
     // console.log(iceCandidate);
     // we need to take this ice candidate and find the offer that it belongs to and then if didIOffer is true we need to add it to the offer ice candidate.
     if (didIOffer) {
+      // this ice is coming from the offerer. send to the answerer.
       // here if didIOffer means i am the offer the person who sent this and this is my name go find in the offer array that particular offer where my name matches in the offer as well as what i just sent you
+
       const offerInOffers = offers.find(
         (o) => o.offererUserName === iceUserName
       );
@@ -75,6 +108,39 @@ io.on("connection", (socket) => {
         // the icecandidate that just came in
         // come back to this....
         // if the answer is already here, emit the iceCandidate to that user.
+        // 1. when the answerer answers, all existing ice candidates are sent
+        // 2. Any candidates that come in after the offer has been answered, will be passed through
+        if (offerInOffers.answererUserName) {
+          // pass it through to the other socket
+          const socketToSendTo = connectedSockets.find(
+            (s) => s.userName === offerInOffers.answererUserName
+          );
+          if (socketToSendTo) {
+            socket
+              .to(socketToSendTo.socketId)
+              .emit("receivedIceCandidateFromServer", iceCandidate);
+          } else {
+            console.log(
+              "Ice candidate received but could not find the answerer"
+            );
+          }
+        }
+      }
+    } else {
+      // this ice is coming from the answerer. send to the offerer.
+      // pass it through to the other socket
+      const offerInOffers = offers.find(
+        (o) => o.answererUserName === iceUserName
+      );
+      const socketToSendTo = connectedSockets.find(
+        (s) => s.userName === offerInOffers.offererUserName
+      );
+      if (socketToSendTo) {
+        socket
+          .to(socketToSendTo.socketId)
+          .emit("receivedIceCandidateFromServer", iceCandidate);
+      } else {
+        console.log("Ice candidate received but could not find the offerer");
       }
     }
     console.log(offers);

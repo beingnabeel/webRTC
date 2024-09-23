@@ -41,7 +41,7 @@ SINGNALING server has been waiting....
     - and is done
     - waiting on ICE candidate
     - waiting on tracks
-21. SIGNALING server sends CLIENT1 answer (RTCSessionDescription - sdp/type) 
+21. SIGNALING server listens for answers, emits CLIENT1 answer (RTCSessionDescription - sdp/type) 
 22. CLIENT1 takes the answer and hands it to peerConnection.setRemoteDescription
 23. CLIENT1 waits for ICE candidates and tracks 
 

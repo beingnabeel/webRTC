@@ -56,8 +56,25 @@ const answerOffer = async (offerObj) => {
   console.log(offerObj);
   console.log(answer);
   // console.log(peerConnection.signalingState); //should be have local pranswer because CLIENT2 has set its local description to its answer (but it won't be)
+  // add the answer to the offerObjc so the server knows which offer this is related to
+  offerObj.answer = answer;
+  // emit the answer to the signaling server, so it can emit to client1
+  // also expect a response from the server with the already existing ICE candidates
+  // socket.emit("newAnswer", offerObj);
+  const offerIceCandidates = await socket.emitWithAck("newAnswer", offerObj);
+  offerIceCandidates.forEach((c) => {
+    peerConnection.addIceCandidate(c);
+    console.log("=================Added Ice Candidate==============");
+  });
+  console.log(offerIceCandidates);
 };
-
+const addAnswer = async (offerObj) => {
+  //addAnswer is called in socketListeners when an answerResponse is emitted.
+  // at this point the offer and the answer have been exchanged.
+  // now client1 needs to set the remote
+  await peerConnection.setRemoteDescription(offerObj.answer);
+  // console.log(peerConnection.signalingState);
+};
 const fetchUserMedia = () => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -120,5 +137,10 @@ const createPeerConnection = (offerObj) => {
     }
     resolve();
   });
+};
+
+const addNewIceCandidate = (iceCandidate) => {
+  peerConnection.addIceCandidate(iceCandidate);
+  console.log("---------------ADDED ICE CANDIDATE ---------------");
 };
 document.querySelector("#call").addEventListener("click", call);
