@@ -99,7 +99,10 @@ const createPeerConnection = (offerObj) => {
     // which will fetch us ICE candidates
     // so this returns a promise so we will put await in there. and make our promise async
     peerConnection = await new RTCPeerConnection(peerConfiguration);
+    remoteStream = new MediaStream();
+    remoteVideoEl.srcObject = remoteStream;
     localStream.getTracks().forEach((track) => {
+      // add localTracks so that they can be sent once the connection is established.
       peerConnection.addTrack(track, localStream);
     });
 
@@ -124,6 +127,15 @@ const createPeerConnection = (offerObj) => {
           didIOffer,
         });
       }
+    });
+
+    peerConnection.addEventListener("track", (e) => {
+      console.log("Got a track from the other peer!! How exciting.");
+      console.log(e);
+      e.streams[0].getTracks().forEach((track) => {
+        remoteStream.addTrack(track, remoteStream);
+        console.log("Here's an exciting moment... fingers crossed");
+      });
     });
     if (offerObj) {
       // this won't be set when called from caLL()
