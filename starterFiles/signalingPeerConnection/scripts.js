@@ -1,11 +1,29 @@
 const userName = "Nabeel-" + Math.floor(Math.random() * 100000);
 const password = "x";
 document.querySelector("#user-name").innerHTML = userName;
-const socket = io.connect("https://localhost:8181/", {
+function getServerUrl() {
+  const hostname = window.location.hostname;
+  if (hostname === "localhost" || hostname === "127.0.0.1") {
+    return "https://localhost:8181/";
+  } else {
+    return "https://192.168.68.104:8181/";
+  }
+}
+// const socket = io.connect("https://localhost:8181/", {
+//   auth: {
+//     userName,
+//     password,
+//   },
+// });
+const serverUrl = getServerUrl();
+console.log(`Connecting to server at: ${serverUrl}`);
+
+const socket = io.connect(serverUrl, {
   auth: {
     userName,
     password,
   },
+  withCredentials: true,
 });
 // populating the video feed for our local stream
 const localVideoEl = document.querySelector("#local-video");

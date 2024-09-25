@@ -1,10 +1,41 @@
 // const path = require("path");
 const fs = require("fs");
 const https = require("https");
+const cors = require("cors");
 const express = require("express");
 const app = express();
 const socketio = require("socket.io");
 app.use(express.static(__dirname));
+
+// // CORS configuration
+// app.use(
+//   cors({
+//     origin: ["https://localhost:8181", "https://192.168.68.104:8181"],
+//     methods: ["GET", "POST"],
+//     credentials: true,
+//   })
+// );
+const allowedOrigins = [
+  "https://localhost:8181",
+  "https://127.0.0.1:8181",
+  "https://192.168.68.104:8181",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        var msg =
+          "The CORS policy for this site does not allow access from the specified Origin.";
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+    methods: ["GET", "POST"],
+    credentials: true,
+  })
+);
 // we need a key and cert to run https
 // we generated them with mkcert
 // $ mkcert create-ca
@@ -15,7 +46,13 @@ const cert = fs.readFileSync("cert.crt");
 // pass the key and cert to createServer on https
 const expressServer = https.createServer({ key, cert }, app);
 // create our socket.io server .... it will listen on our express port
-const io = socketio(expressServer);
+const io = socketio(expressServer, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
 expressServer.listen(8181);
 // we will use mkcert node module to create our https server
 // offers will contain{} objects
